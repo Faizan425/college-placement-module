@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | Placement Portal</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #2c3e50; }
+        .login-box { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 350px; }
+        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px;}
+        button:hover { background-color: #1a252f; }
+        .error { color: red; text-align: center; margin-top: 10px; display: none; }
+        .footer-link { text-align: center; margin-top: 20px; font-size: 0.9em; }
+        .footer-link a { color: #666; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="login-box">
+        <h2>Admin Console</h2>
+        <form id="admin-form">
+            <input type="email" id="email" placeholder="Admin Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Access Dashboard</button>
+            <p class="error" id="error-msg"></p>
+        </form>
+
+        <div class="footer-link">
+            <a href="index.html">&larr; Back to Student Login</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('admin-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    
+                    if (data.user.role !== 'admin') {
+                        // If a student logs in here, show error
+                        errorMsg.innerText = "Access Denied: You are not an Admin.";
+                        errorMsg.style.display = 'block';
+                        //Auto-logout the session 
+                        fetch('/api/logout', { method: 'POST' }); 
+                    } else {
+                        window.location.href = '/admin_dashboard.html';
+                    }
+                } else {
+                    errorMsg.innerText = data.message;
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.innerText = "Server Error";
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

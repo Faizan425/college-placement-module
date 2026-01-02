@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Profile</title>
+    <style>
+        
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; padding-top: 50px; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        input:focus { border-color: #007bff; outline: none; }
+        button { width: 100%; padding: 14px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #0056b3; }
+        .error { color: red; text-align: center; display: none; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Basic Information</h2>
+        <form id="basic-info-form">
+            
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="name" placeholder="John Doe" required>
+            </div>
+
+            <div class="form-group">
+                <label>Gender</label>
+                <select id="gender" required>
+                    <option value="" disabled selected>Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Father's Name</label>
+                <input type="text" id="fathers_name" placeholder="Father's Name" required>
+            </div>
+            <div class="form-group">
+                <label>Mother's Name</label>
+                <input type="text" id="mothers_name"
+                placeholder="Mother's Name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Current Academic Year</label>
+                <select id="current_year" required>
+                    <option value="" disabled selected>Select Year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Resume Link (Google Drive/Dropbox)</label>
+                <input type="url" id="resume_link" placeholder="https://drive.google.com/..." required>
+                <small style="color: #888;">Ensure the link is publicly accessible.</small>
+            </div>
+
+            <button type="submit" id="submit-btn">Save & Proceed to Dashboard</button>
+            <p class="error" id="error-msg"></p>
+        </form>
+    </div>
+
+    <script>
+        fetch('/api/current_user').then(res => {
+            if (res.status === 401) window.location.href = '/index.html';
+        });
+
+        document.getElementById('basic-info-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const errorMsg = document.getElementById('error-msg');
+            
+            // Disable button to prevent double clicks
+            btn.disabled = true;
+            btn.innerText = "Saving...";
+
+            
+            const payload = {
+                name: document.getElementById('name').value,
+                gender: document.getElementById('gender').value,
+                fathers_name: document.getElementById('fathers_name').value,
+                mothers_name: document.getElementById('mothers_name').value
+                current_year: parseInt(document.getElementById('current_year').value),
+                resume_link: document.getElementById('resume_link').value
+            };
+
+            try {
+                
+                const res = await fetch('/api/student/basic-info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    
+                    window.location.href = '/student_dashboard.html';
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.message || "Failed to save");
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.innerText = err.message;
+                errorMsg.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = "Save & Proceed to Dashboard";
+            }
+        });
+    </script>
+</body>
+</html>

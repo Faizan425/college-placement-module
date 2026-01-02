@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Company Openings</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; }
+        .navbar { background-color: #2c3e50; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-back { background-color: #95a5a6; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        
+        .container { max-width: 1000px; margin: 30px auto; padding: 20px; }
+        h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+
+        
+        .company-card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: grid; grid-template-columns: 3fr 1fr; gap: 20px; align-items: center; }
+        .co-header h3 { margin: 0 0 5px 0; color: #2c3e50; }
+        .co-role { color: #7f8c8d; font-weight: bold; margin-bottom: 10px; display: block; }
+        .co-salary { color: #27ae60; font-weight: bold; font-size: 1.1em; }
+        .co-desc { color: #555; margin-top: 10px; font-size: 0.9em; }
+
+        
+        .criteria-box { background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 0.85em; color: #666; margin-top: 10px; border-left: 3px solid #007bff; }
+
+        
+        .action-area { text-align: right; }
+        
+        .btn-apply { padding: 12px 25px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; transition: 0.3s; color: white; }
+        .btn-green { background-color: #27ae60; } /* Eligible */
+        .btn-green:hover { background-color: #219150; }
+        
+        .btn-gray { background-color: #bdc3c7; cursor: not-allowed; position: relative; } /* Not Eligible */
+
+        
+        .tooltip-wrapper { display: inline-block; position: relative; }
+        
+        .status-applied { background-color: #34495e; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h3>Placement Opportunities</h3>
+        <button class="btn-back" onclick="window.location.href='/student_dashboard.html'">Back to Dashboard</button>
+    </div>
+
+    <div class="container">
+        <h2>Available Companies</h2>
+        <div id="company-list">
+            <p style="text-align:center;">Loading opportunities...</p>
+        </div>
+    </div>
+
+    <script>
+        // GLOBAL DATA
+        let studentProfile = null;
+
+        window.onload = async () => {
+            try {
+                const pRes = await fetch('/api/student/profile');
+                if (pRes.status === 401) window.location.href = '/index.html'; //redirect to login to create profile
+                studentProfile = await pRes.json();
+
+                
+                const cRes = await fetch('/api/student/companies');
+                const companies = await cRes.json();
+
+                renderCompanies(companies);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('company-list').innerHTML = "<p>Error loading data.</p>";
+            }
+        };
+
+        function renderCompanies(companies) {
+            const container = document.getElementById('company-list');
+            
+            if (companies.length === 0) {
+                container.innerHTML = "<p>No companies have listed openings yet.</p>";
+                return;
+            }
+
+            container.innerHTML = companies.map(company => {
+                const eligibility = checkEligibility(company, studentProfile);
+                
+                // Check if already applied
+                // Note: applicants array contains objects { student: "ID", ... }
+                const isApplied = company.applicants.some(app => app.student === studentProfile._id);
+
+                let buttonHTML = '';
+
+                if (isApplied) {
+                    buttonHTML = `<span class="status-applied">Applied </span>`;
+                } else if (eligibility.isEligible) {
+                    buttonHTML = `<button class="btn-apply btn-green" onclick="applyToCompany('${company._id}')">Apply Now</button>`;
+                } else {
+                    // Not Eligible -> Gray Button with Tooltip (title attribute)
+                    buttonHTML = `
+                        <div class="tooltip-wrapper" title="${eligibility.reason}">
+                            <button class="btn-apply btn-gray" disabled>Not Eligible </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                <div class="company-card">
+                    <div class="co-info">
+                        <div class="co-header">
+                            <h3>${company.name}</h3>
+                            <span class="co-role">${company.position_role}</span>
+                        </div>
+                        <div class="co-salary">₹ ${company.salary.toLocaleString('en-IN')} / Year</div>
+                        <p class="co-desc">${company.description || "No description provided."}</p>
+                        
+                        <div class="criteria-box">
+                            <strong>Criteria:</strong> Min CGPA: ${company.constraints.min_cgpa} | 
+                            Year: ${company.constraints.min_year}+ | 
+                            History of Arrears: ${company.constraints.history_of_arrears_allowed ? "Allowed" : "Not Allowed"}
+                        </div>
+                    </div>
+                    <div class="action-area">
+                        ${buttonHTML}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        //Check eligibility
+        function checkEligibility(company, student) {
+            const constraints = company.constraints;
+            const academic = student.academic_info;
+            const basic = student.basic_info;
+
+            
+            if (basic.current_year < constraints.min_year) {
+                return { isEligible: false, reason: `Requires Year ${constraints.min_year} or higher` };
+            }
+
+            
+            if ((academic.current_cgpa || 0) < constraints.min_cgpa) {
+                return { isEligible: false, reason: `Min CGPA ${constraints.min_cgpa} required` };
+            }
+
+            
+            if (!constraints.history_of_arrears_allowed && academic.arrear_info.history_of_arrears) {
+                return { isEligible: false, reason: "History of Arrears not allowed" };
+            }
+            if (academic.arrear_info.standing_arrears > constraints.max_standing_arrears) {
+                return { isEligible: false, reason: `Max ${constraints.max_standing_arrears} standing arrears allowed` };
+            }
+
+            
+            if (student.placement_info.is_placed) {
+                if (company.salary <= student.placement_info.current_package) {
+                    return { isEligible: false, reason: "Package is not higher than your current offer" };
+                }
+            }
+
+            return { isEligible: true, reason: "" };
+        }
+
+        
+        async function applyToCompany(companyId) {
+            if(!confirm("Are you sure you want to apply?")) return;
+
+            try {
+                const res = await fetch('/api/student/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ companyId })
+                });
+
+                const data = await res.json();
+                
+                if (res.ok) {
+                    alert("Application Successful!");
+                    window.location.reload(); // Refresh to update status to "Applied"
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (err) {
+                alert("Server connection failed");
+            }
+        }
+    </script>
+</body>
+</html>

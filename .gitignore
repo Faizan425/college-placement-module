@@ -1,0 +1,8 @@
+# Dependencies
+node_modules/
+
+# Security keys (NEVER PUSH THESE)
+.env
+
+# System files
+.DS_Store

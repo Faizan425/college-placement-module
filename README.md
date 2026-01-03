@@ -42,19 +42,23 @@ cd placement-management-system
 
  ### 3. Environment Configuration
  # Server Port
+```bash
 PORT=3000
-
+```
 # MongoDB Connection String (Local or Atlas)
+```bash
 MONGO_URI=mongodb://localhost:27017/db_name
-
-# Session Secret (Random String)
+```
+# Session Secret 
+```bash
 COOKIE_KEY=your_secret_key_here
-
-# Email Configuration (For Notifications)
-# NOTE: If using Gmail, you must use an App Password, not your login password.
+```
+# Email Configuration 
+# NOTE: If using Gmail, you must use an App Password.
+```bash
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_16_char_app_password
-
+```
 ### 4.Run the Application
 ```bash
 npm run dev
